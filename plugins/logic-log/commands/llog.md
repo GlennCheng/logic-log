@@ -25,10 +25,10 @@ allowed-tools: ["Read", "Bash", "Write"]
 ```
 #001 [SESSION|USER]  14:23 — 為什麼不用行數估工時
 #002 [INSIGHT|JOINT] 15:01 — 直覺與理論的橋接
-#003 [SESSION|LLM]   15:30 — hooks.json 格式驗證
+#003 [SESSION|AI]   15:30 — hooks.json 格式驗證
 ```
 
-從每個 `┌─` 標題行提取類型標籤（含 `| USER/LLM/JOINT` 部分）顯示，讓發起來源一眼可辨。
+從每個 `┌─` 標題行提取類型標籤（含 `| USER/AI/JOINT` 部分）顯示，讓發起來源一眼可辨。
 
 current-session-id 從 SessionStart hook 注入的 context 取得：找「**Claude Session ID：** ...」這行，取其後的值。
 
@@ -97,7 +97,7 @@ cat "$LOG_DIR/index.md" 2>/dev/null || echo "（尚無記錄）"
 - 目前最大編號（下一筆從 MAX+1 開始）
 - 現有記錄的主題與關係（供建立關係鏈參考）
 
-**Step 3：LLM 全程分析對話**
+**Step 3：AI 全程分析對話**
 
 目標：**盡可能還原從對話開始到當下的完整推理過程**，不遺漏。
 依時間順序從頭掃描對話歷史，識別所有符合觸發條件的推理段落：
@@ -109,11 +109,11 @@ cat "$LOG_DIR/index.md" 2>/dev/null || echo "（尚無記錄）"
 
 每個段落獨立評估：
 - 定型為 SESSION 或 INSIGHT（或同時兩筆）
-- 判斷發起者：誰先提出核心洞見？→ USER / LLM / JOINT
-  - USER：使用者說出直覺、判斷、選擇，LLM 只是協助結構化
-  - LLM：LLM 先識別問題或提出方案，使用者確認
+- 判斷發起者：誰先提出核心洞見？→ USER / AI / JOINT
+  - USER：使用者說出直覺、判斷、選擇，AI 只是協助結構化
+  - AI：AI 先識別問題或提出方案，使用者確認
   - JOINT：兩方共同推導，缺一不可；有疑問時預設 JOINT
-- 在 🧠 欄位用 `使用者：` / `LLM：` 標注各自貢獻
+- 在 🧠 欄位用 `使用者：` / `AI：` 標注各自貢獻
 - 提煉核心邏輯、考量維度、排除項目、結論
 - 識別背後理論（開放式，不限清單）
 
