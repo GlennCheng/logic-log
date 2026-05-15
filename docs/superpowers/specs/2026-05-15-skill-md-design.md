@@ -206,30 +206,14 @@ Theory Ledger 是**反向索引**：
 
 ```
 ~/.claude/logic-logs/
-├── YYYY-MM-DD.md    ← 當日完整記錄（按日期命名，跨 session 共享）
-├── index.md         ← 所有記錄的單行摘要索引（含 Session ID，供 grep 查詢）
-└── theories.md      ← Theory Ledger（理論圖鑑）
+├── sessions/
+│   ├── {claude-session-id}.md    ← 每個 session 一個檔（主要存取單位）
+│   └── {claude-session-id}.md
+├── index.md                       ← 全局摘要索引（含日期，供跨日查詢與搜尋）
+└── theories.md                    ← Theory Ledger（理論圖鑑）
 ```
 
-**日期檔案用日期命名（不用 Session ID）**，同一天多個 session 共用一個檔案。
-
-### Session 查詢：A + B 雙軌
-
-**方案 A（index.md grep）：** index.md 每行含 Claude Session ID，`/llog` 直接 grep 當前 session ID 取得本次所有記錄。快速、程式友善。
-
-**方案 B（daily file 標頭）：** 每個 session 開始時，session-start.sh 在當日 .md 檔案寫入 session 分隔標頭，人類直接閱讀檔案時清楚看到 session 邊界。
-
-```markdown
-## Session a1b2c3d4-e5f6（2026-05-15-14-23）
-
-┌─ [SESSION] 邏輯記錄 #001 ...
-...
-
-## Session f6e5d4c3-b2a1（2026-05-15-16-00）
-
-┌─ [SESSION] 邏輯記錄 #004 ...
-...
-```
+**每個 session 獨立一個檔案**，以 Claude 原生 session ID 命名。主要查詢（`/llog`、`/llog 3`）直接讀當前 session 檔，無需 grep。跨日/全局查詢走 index.md。
 
 ### index.md 格式
 
@@ -258,9 +242,19 @@ Theory Ledger 是**反向索引**：
 
 Claude 輸出記錄區塊後，自動執行：
 
-1. 完整記錄 → append 到 `~/.claude/logic-logs/YYYY-MM-DD.md`（session 標頭已由 session-start.sh 寫入）
+1. 完整記錄 → append 到 `~/.claude/logic-logs/sessions/{claude-session-id}.md`
 2. 摘要索引 → 在 `~/.claude/logic-logs/index.md` append 一行（七欄格式）
 3. 理論更新 → 在 `~/.claude/logic-logs/theories.md` 對應條目新增應用記錄
+
+### 查詢對應
+
+| 查詢 | 實作 |
+|------|------|
+| `/llog`（本 session） | 直接讀 `sessions/{current-session-id}.md` |
+| `/llog 3`（本 session 第 3 筆） | 讀同一 session 檔，取第 3 個記錄區塊 |
+| `/llog today` | grep index.md 找今天日期，讀對應 session 檔 |
+| `/llog #042` | grep index.md 找 #042 的 session ID，讀對應 session 檔 |
+| `/llog search <關鍵字>` | grep 所有 `sessions/*.md` |
 
 ### 編號機制
 
@@ -297,6 +291,6 @@ Claude 輸出記錄區塊後，自動執行：
 | Theory Ledger | 獨立 theories.md 反向索引 | 以理論為出發點查應用記錄，互補正向索引 |
 | 儲存格式 | Markdown | 零依賴、人類可讀、可直接分享 |
 | 編號 | SessionStart 注入起始值 | 跨 session 連續，不需每次讀檔 |
-| 日期檔案命名 | YYYY-MM-DD.md（非 Session ID） | 跨 session 共享，session 邊界靠標頭分隔 |
-| Session 查詢 | A+B 雙軌 | index.md grep（程式友善）+ daily 標頭（人類可讀）|
-| Session ID 欄位 | 兩欄分開 | Claude 原生 ID + 日期時分，各有用途 |
+| Session 檔案命名 | {claude-session-id}.md | 主要查詢直接讀檔，不需 grep |
+| 跨日查詢 | grep index.md 日期欄位 | index.md 是全局索引，含日期可過濾 |
+| Session ID 欄位 | 兩欄分開 | Claude 原生 ID（檔名）+ 日期時分（可讀時間戳）|
