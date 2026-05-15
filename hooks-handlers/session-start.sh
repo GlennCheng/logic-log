@@ -29,17 +29,17 @@ if [ ! -f "$THEORIES_FILE" ]; then
 EOF
 fi
 
+# ── 取得專案名稱 ──────────────────────────────────────────────
+PROJECT=$(git rev-parse --show-toplevel 2>/dev/null | xargs basename 2>/dev/null || basename "$PWD")
+
 # ── 初始化 session 檔案（若不存在）───────────────────────
 if [ ! -f "$SESSION_FILE" ]; then
     cat > "$SESSION_FILE" << EOF
 # Logic Log — Session $CLAUDE_SESSION_ID
 **開始時間：** $SESSION_START
-**專案：**
+**專案：** $PROJECT
 EOF
 fi
-
-# ── 取得專案名稱 ──────────────────────────────────────────────
-PROJECT=$(git rev-parse --show-toplevel 2>/dev/null | xargs basename 2>/dev/null || basename "$PWD")
 
 # ── 計算下一筆編號 ────────────────────────────────────────────
 LATEST_NUM=$(grep -oP '(?<=^#)\d+' "$INDEX_FILE" 2>/dev/null | sort -n | tail -1 || echo "")
