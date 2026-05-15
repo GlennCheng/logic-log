@@ -1,0 +1,27 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "GlennCheng-logic-log",
+  "description": "Glenn Cheng 的 Claude Code plugins — 自動捕捉對話邏輯思維的工具",
+  "owner": {
+    "name": "Glenn Cheng",
+    "email": "glenn77217@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "logic-log",
+      "description": "自動捕捉對話中的邏輯思維與決策過程，識別背後理論原理，建立可跨 session 引用的知識資產。",
+      "author": {
+        "name": "Glenn Cheng"
+      },
+      "category": "productivity",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/GlennCheng/logic-log.git",
+        "path": "plugins/logic-log",
+        "ref": "master",
+        "sha": "e86d991255f072bd7e308f8e1bc22411e34cffcb"
+      },
+      "homepage": "https://github.com/GlennCheng/logic-log"
+    }
+  ]
+}
