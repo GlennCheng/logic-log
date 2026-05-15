@@ -18,8 +18,7 @@
         "source": "git-subdir",
         "url": "https://github.com/GlennCheng/logic-log.git",
         "path": "plugins/logic-log",
-        "ref": "v1.1.0",
-        "sha": "d4e529e43e8e9ba1bfedb77d91b37acb07c99505"
+        "ref": "master"
       },
       "homepage": "https://github.com/GlennCheng/logic-log"
     }
