@@ -159,7 +159,7 @@ Theory Ledger 是**反向索引**：
       分子樣本小（數十筆）則每筆誤差都直接影響最終比例。
 
 應用記錄：
-- #003 | SESSION | project-magento2-hotai | S2026-05-15-14-23 | 驗收款項扣減計算 v3 | 分子 vs 分母噪音不對等 | 未完成票（小樣本）每筆估算誤差直接影響扣款率，已完成票（大樣本）隨機誤差統計上互相抵銷，因此應採不同處理策略：小樣本逐筆深度審查，大樣本走批次平行處理
+- #003 | SESSION | project-magento2-hotai | a1b2c3d4-e5f6 | 2026-05-15-14-23 | 驗收款項扣減計算 v3 | 分子 vs 分母噪音不對等 | 未完成票（小樣本）每筆估算誤差直接影響扣款率，已完成票（大樣本）隨機誤差統計上互相抵銷，因此應採不同處理策略：小樣本逐筆深度審查，大樣本走批次平行處理
 
 ---
 ## 奧卡姆剃刀（Occam's Razor）
@@ -168,22 +168,28 @@ Theory Ledger 是**反向索引**：
       否則維護成本與出錯機率都會無謂上升。
 
 應用記錄：
-- #001 | SESSION | logic-log | S2026-05-15-16-01 | logic-log plugin 架構選型 | 選 Skill+Hook 而非 MCP | MCP 引入外部服務依賴，但需求只是輕量記錄；Skill+Hook 零依賴且自動觸發，滿足 80% 功能但成本趨近於零
+- #001 | SESSION | logic-log | f6e5d4c3-b2a1 | 2026-05-15-16-01 | logic-log plugin 架構選型 | 選 Skill+Hook 而非 MCP | MCP 引入外部服務依賴，但需求只是輕量記錄；Skill+Hook 零依賴且自動觸發，滿足 80% 功能但成本趨近於零
 ```
 
 ### 應用記錄欄位
 
-`#編號 | 類型 | 專案 | Session ID | Session 大主題 | 當筆主題 | 簡單描述`
+`#編號 | 類型 | 專案 | Claude Session ID | Session 開始時間戳 | Session 大主題 | 當筆主題 | 簡單描述`
 
 | 欄位 | 來源 |
 |------|------|
 | #編號 | 記錄的全局編號 |
 | 類型 | SESSION 或 INSIGHT |
 | 專案 | session-start.sh 從 git repo 名稱或工作目錄自動抓取 |
-| Session ID | 格式 `S{YYYY-MM-DD-HH-MM}`，session 開始時由 session-start.sh 產生並注入 |
-| Session 大主題 | Claude 在寫記錄當下，根據對話脈絡判斷目前在做什麼，就地記錄，不回頭更新 |
+| Claude Session ID | Claude Code 原生 session ID（從 hook stdin `.session_id` 讀取） |
+| Session 開始時間戳 | 格式 `YYYY-MM-DD-HH-MM`，session 開始時由 session-start.sh 產生並注入 |
+| Session 大主題 | Claude 在寫記錄當下，根據對話脈絡判斷目前在做什麼，就地記錄，**不回頭更新之前的記錄** |
 | 當筆主題 | 這筆記錄的具體主題 |
 | 簡單描述 | 2-3 句說明此理論如何被應用、產生什麼洞見 |
+
+範例：
+```
+- #003 | SESSION | project-magento2-hotai | a1b2c3d4-e5f6 | 2026-05-15-14-23 | 驗收款項扣減計算 v3 | 分子 vs 分母噪音不對等 | 未完成票（小樣本）每筆估算誤差直接影響扣款率，已完成票（大樣本）隨機誤差統計上互相抵銷，應採不同處理策略
+```
 
 ### 更新規則
 
@@ -200,25 +206,65 @@ Theory Ledger 是**反向索引**：
 
 ```
 ~/.claude/logic-logs/
-├── YYYY-MM-DD.md    ← 當日完整記錄（跨 session 共享）
-├── index.md         ← 所有記錄的單行摘要索引
+├── YYYY-MM-DD.md    ← 當日完整記錄（按日期命名，跨 session 共享）
+├── index.md         ← 所有記錄的單行摘要索引（含 Session ID，供 grep 查詢）
 └── theories.md      ← Theory Ledger（理論圖鑑）
+```
+
+**日期檔案用日期命名（不用 Session ID）**，同一天多個 session 共用一個檔案。
+
+### Session 查詢：A + B 雙軌
+
+**方案 A（index.md grep）：** index.md 每行含 Claude Session ID，`/llog` 直接 grep 當前 session ID 取得本次所有記錄。快速、程式友善。
+
+**方案 B（daily file 標頭）：** 每個 session 開始時，session-start.sh 在當日 .md 檔案寫入 session 分隔標頭，人類直接閱讀檔案時清楚看到 session 邊界。
+
+```markdown
+## Session a1b2c3d4-e5f6（2026-05-15-14-23）
+
+┌─ [SESSION] 邏輯記錄 #001 ...
+...
+
+## Session f6e5d4c3-b2a1（2026-05-15-16-00）
+
+┌─ [SESSION] 邏輯記錄 #004 ...
+...
+```
+
+### index.md 格式
+
+每筆記錄一行，**七個欄位**：
+
+```
+#NNN | YYYY-MM-DD HH:MM | {claude-session-id} | YYYY-MM-DD-HH-MM | TYPE | 主題 | 理論1·理論2
+```
+
+| 欄位 | 說明 |
+|------|------|
+| #NNN | 全局編號（三位數補零） |
+| YYYY-MM-DD HH:MM | 記錄寫入時間 |
+| {claude-session-id} | Claude Code 原生 session ID（從 hook stdin `.session_id` 讀取） |
+| YYYY-MM-DD-HH-MM | Session 開始的日期 + 時分（human-readable 時間戳） |
+| TYPE | SESSION 或 INSIGHT |
+| 主題 | 記錄的核心問題 |
+| 理論 | 識別到的理論，多個用 `·` 分隔 |
+
+範例：
+```
+#003 | 2026-05-15 14:23 | a1b2c3d4-e5f6 | 2026-05-15-14-23 | SESSION | 為什麼不用行數估工時 | 代理變數謬誤·大數法則
 ```
 
 ### 儲存流程
 
 Claude 輸出記錄區塊後，自動執行：
 
-1. 完整記錄 → 寫入 `~/.claude/logic-logs/YYYY-MM-DD.md`
-2. 摘要索引 → 在 `~/.claude/logic-logs/index.md` 新增一行：
-   ```
-   #003 | 2026-05-15 14:23 | SESSION | 為什麼不用行數估工時 | 代理變數謬誤·大數法則
-   ```
+1. 完整記錄 → append 到 `~/.claude/logic-logs/YYYY-MM-DD.md`（session 標頭已由 session-start.sh 寫入）
+2. 摘要索引 → 在 `~/.claude/logic-logs/index.md` append 一行（七欄格式）
 3. 理論更新 → 在 `~/.claude/logic-logs/theories.md` 對應條目新增應用記錄
 
 ### 編號機制
 
-- SessionStart hook 讀取 `index.md` 最新編號，注入 context（例如：「目前最新記錄 #007，下一筆從 #008 開始」）
+- SessionStart hook 讀取 `index.md` 最新編號，注入 context（「下一筆記錄從 #008 開始」）
 - Session 內 Claude 自行遞增，不需每次讀檔
 
 ---
@@ -251,3 +297,6 @@ Claude 輸出記錄區塊後，自動執行：
 | Theory Ledger | 獨立 theories.md 反向索引 | 以理論為出發點查應用記錄，互補正向索引 |
 | 儲存格式 | Markdown | 零依賴、人類可讀、可直接分享 |
 | 編號 | SessionStart 注入起始值 | 跨 session 連續，不需每次讀檔 |
+| 日期檔案命名 | YYYY-MM-DD.md（非 Session ID） | 跨 session 共享，session 邊界靠標頭分隔 |
+| Session 查詢 | A+B 雙軌 | index.md grep（程式友善）+ daily 標頭（人類可讀）|
+| Session ID 欄位 | 兩欄分開 | Claude 原生 ID + 日期時分，各有用途 |
