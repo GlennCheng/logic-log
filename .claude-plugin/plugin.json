@@ -1,0 +1,9 @@
+{
+  "name": "logic-log",
+  "version": "1.0.0",
+  "description": "自動捕捉對話中的邏輯思維與決策過程，識別背後理論原理，建立可跨 session 引用的知識資產。",
+  "author": {
+    "name": "Glenn Cheng",
+    "email": "glenn77217@gmail.com"
+  }
+}
