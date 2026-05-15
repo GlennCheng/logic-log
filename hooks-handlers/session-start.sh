@@ -3,7 +3,11 @@ set -euo pipefail
 
 # ── 讀取 hook input ──────────────────────────────────────────
 HOOK_INPUT=$(cat)
-CLAUDE_SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // "unknown"')
+if command -v jq >/dev/null 2>&1; then
+    CLAUDE_SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // "unknown"' | tr -cd '[:alnum:]-_')
+else
+    CLAUDE_SESSION_ID=$(echo "$HOOK_INPUT" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()).get('session_id','unknown'))" | tr -cd '[:alnum:]-_')
+fi
 SESSION_START=$(date +"%Y-%m-%d-%H-%M")
 
 # ── 儲存目錄（可用環境變數覆蓋）────────────────────────────
@@ -42,7 +46,7 @@ EOF
 fi
 
 # ── 計算下一筆編號 ────────────────────────────────────────────
-LATEST_NUM=$(grep -oP '(?<=^#)\d+' "$INDEX_FILE" 2>/dev/null | sort -n | tail -1 || echo "")
+LATEST_NUM=$(grep -oE '^#[0-9]+' "$INDEX_FILE" 2>/dev/null | grep -oE '[0-9]+$' | sort -n | tail -1 || true)
 if [ -z "$LATEST_NUM" ]; then
     NEXT_NUM=1
 else
@@ -51,7 +55,8 @@ fi
 NEXT_NUM_PADDED=$(printf '%03d' "$NEXT_NUM")
 
 # ── 取得最近 5 筆記錄 ─────────────────────────────────────────
-RECENT=$(grep -P '^#\d+' "$INDEX_FILE" 2>/dev/null | tail -5 || echo "（尚無記錄）")
+RECENT=$(grep -E '^#[0-9]+' "$INDEX_FILE" 2>/dev/null | tail -5 || true)
+RECENT="${RECENT:-（尚無記錄）}"
 
 # ── 組裝 context 字串 ─────────────────────────────────────────
 CONTEXT=$(cat << CTXEOF
@@ -71,11 +76,19 @@ CTXEOF
 )
 
 # ── 輸出 hook JSON ────────────────────────────────────────────
-jq -n --arg ctx "$CONTEXT" '{
-  hookSpecificOutput: {
-    hookEventName: "SessionStart",
-    additionalContext: $ctx
-  }
-}'
+if command -v jq >/dev/null 2>&1; then
+    jq -n --arg ctx "$CONTEXT" '{
+      hookSpecificOutput: {
+        hookEventName: "SessionStart",
+        additionalContext: $ctx
+      }
+    }'
+else
+    printf '%s' "$CONTEXT" | python3 -c "
+import json, sys
+ctx = sys.stdin.read()
+print(json.dumps({'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': ctx}}))
+"
+fi
 
 exit 0
